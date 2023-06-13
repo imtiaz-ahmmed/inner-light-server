@@ -39,7 +39,7 @@ async function run() {
     });
 
     app.get("/instructors", async (req, res) => {
-      const cursor = instructorsCollection.find();
+      const cursor = instructorsCollection.find().limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
