@@ -44,6 +44,19 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/all-instructors", async (req, res) => {
+      const cursor = instructorsCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/all-instructors/instructor/:instructorName", async (req, res) => {
+      const name = req.params.instructorName;
+      const query = { instructorName: name };
+      const result = await classesCollection.findOne(query);
+      res.send(result);
+    });
+
     app.get("/", (req, res) => {
       res.send("inner-light is running");
     });
