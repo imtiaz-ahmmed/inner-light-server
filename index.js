@@ -38,6 +38,12 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/all-classes", async (req, res) => {
+      const cursor = classesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     app.get("/instructors", async (req, res) => {
       const cursor = instructorsCollection.find().limit(6);
       const result = await cursor.toArray();
