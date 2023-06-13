@@ -28,6 +28,9 @@ async function run() {
     const instructorsCollection = client
       .db("inner-light-db")
       .collection("instructors");
+    const selectedClassCollection = client
+      .db("inner-light-db")
+      .collection("selectedClasses");
 
     app.get("/classes", async (req, res) => {
       const cursor = classesCollection
@@ -60,6 +63,15 @@ async function run() {
       const name = req.params.instructorName;
       const query = { instructorName: name };
       const result = await classesCollection.findOne(query);
+      res.send(result);
+    });
+
+    //POST METHODS
+
+    app.post("/selectedClasses", async (req, res) => {
+      const classes = req.body;
+      console.log(classes);
+      const result = await selectedClassCollection.insertOne(classes);
       res.send(result);
     });
 
