@@ -24,6 +24,7 @@ async function run() {
     // Connect the client to the server
     await client.connect();
 
+    const usersCollection = client.db("inner-light-db").collection("user");
     const classesCollection = client.db("inner-light-db").collection("classes");
     const instructorsCollection = client
       .db("inner-light-db")
@@ -43,6 +44,11 @@ async function run() {
 
     app.get("/all-classes", async (req, res) => {
       const cursor = classesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    app.get("/users", async (req, res) => {
+      const cursor = usersCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -79,6 +85,17 @@ async function run() {
 
     //POST METHODS
 
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+      const existingUser = await usersCollection.findOne(query);
+
+      if (existingUser) {
+        return res.send({ message: "user already exists" });
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
     app.post("/selectedClasses", async (req, res) => {
       const classes = req.body;
       console.log(classes);
@@ -87,11 +104,17 @@ async function run() {
     });
 
     //DELETE METHODS
+
     app.delete("/selectedClasses/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await selectedClassCollection.deleteOne(query);
-      res.send(result);
+
+      if (result.deletedCount > 0) {
+        res.send({ deleteCount: result.deletedCount });
+      } else {
+        res.status(400).send({ message: "The file could not be deleted." });
+      }
     });
 
     app.get("/", (req, res) => {
