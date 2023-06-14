@@ -9,7 +9,26 @@ require("dotenv").config();
 // Middleware
 app.use(cors());
 app.use(express.json());
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "unauthorized access" });
+  }
 
+  const token = authorization.split(" ")[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .send({ error: true, message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ivs96aw.mongodb.net/?retryWrites=true&w=majority`;
 
 async function run() {
@@ -73,15 +92,20 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/selectedClasses", async (req, res) => {
+    app.get("/selectedClasses", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (!email) {
         res.send([]);
-      } else {
-        const query = { studentEmail: email };
-        const result = await selectedClassCollection.find(query).toArray();
-        res.send(result);
       }
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      const query = { studentEmail: email };
+      const result = await selectedClassCollection.find(query).toArray();
+      res.send(result);
     });
 
     //POST METHODS
