@@ -66,6 +66,17 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/selectedClasses", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      } else {
+        const query = { studentEmail: email };
+        const result = await selectedClassCollection.find(query).toArray();
+        res.send(result);
+      }
+    });
+
     //POST METHODS
 
     app.post("/selectedClasses", async (req, res) => {
