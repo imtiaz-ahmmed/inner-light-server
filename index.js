@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const jwt = require("jsonwebtoken");
+const stripe = require("stripe")(
+  "sk_test_51NJYSrKJgobm6GED3PSLTXdCP086TRi5j98YUpt5i0uivo4Tsdrh1X8OzqVIV3Q4tfZehJ5CxTyJOMOvu0WDOwuH00EfkWeDxF"
+);
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
@@ -55,6 +58,9 @@ async function run() {
     const selectedClassCollection = client
       .db("inner-light-db")
       .collection("selectedClasses");
+    const paymentCollection = client
+      .db("inner-light-db")
+      .collection("payments");
 
     app.get("/classes", async (req, res) => {
       const cursor = classesCollection
@@ -96,26 +102,25 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/selectedClasses", verifyJWT, async (req, res) => {
+    app.get("/selectedClasses", async (req, res) => {
       const email = req.query.email;
       if (!email) {
-        res.send([]);
-      }
-      const decodedEmail = req.decoded.email;
-      if (email !== decodedEmail) {
         return res
-          .status(403)
-          .send({ error: true, message: "forbidden access" });
+          .status(400)
+          .send({ error: true, message: "Email parameter is missing." });
       }
-      const query = { studentEmail: email };
-      const result = await selectedClassCollection.find(query).toArray();
-      res.send(result);
-    });
 
-    app.get("/add-classes", async (req, res) => {
-      const cursor = addClassesCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
+      const query = { studentEmail: email };
+      try {
+        const result = await selectedClassCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error retrieving selected classes:", error);
+        res.status(500).send({
+          error: true,
+          message: "An error occurred while retrieving selected classes.",
+        });
+      }
     });
 
     //Verify User Admin/student/Instructor
@@ -185,6 +190,32 @@ async function run() {
       classes.push(newClass);
 
       res.json({ message: "Class added successfully", class: newClass });
+    });
+
+    //payment
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+      const query = {
+        _id: new ObjectId(payment.enrolledClassId),
+      };
+      const deleteResult = await selectedClassCollection.deleteOne(query);
+      res.send({ insertResult, deleteResult });
     });
 
     //PATCH METHODS
