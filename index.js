@@ -45,6 +45,9 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("inner-light-db").collection("user");
+    const addClassesCollection = client
+      .db("inner-light-db")
+      .collection("addClasses");
     const classesCollection = client.db("inner-light-db").collection("classes");
     const instructorsCollection = client
       .db("inner-light-db")
@@ -67,6 +70,7 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+
     app.get("/users", async (req, res) => {
       const cursor = usersCollection.find();
       const result = await cursor.toArray();
@@ -108,6 +112,30 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/add-classes", async (req, res) => {
+      const cursor = addClassesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //Verify User Admin/student/Instructor
+
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
+
+    app.get("/users/instructor/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { instructor: user?.role === "instructor" };
+      res.send(result);
+    });
+
     //POST METHODS
 
     app.post("/users", async (req, res) => {
@@ -121,10 +149,17 @@ async function run() {
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
+
     app.post("/selectedClasses", async (req, res) => {
       const classes = req.body;
       console.log(classes);
       const result = await selectedClassCollection.insertOne(classes);
+      res.send(result);
+    });
+
+    app.post("/add-classes", async (req, res) => {
+      const newItem = req.body;
+      const result = await addClassesCollection.insertOne(newItem);
       res.send(result);
     });
 
@@ -135,6 +170,21 @@ async function run() {
       });
 
       res.send({ token });
+    });
+
+    //Manage class
+    app.post("/add-classes", (req, res) => {
+      const { className, classDescription } = req.body;
+      const newClass = {
+        id: uuidv4(),
+        className,
+        classDescription,
+        feedback: [],
+      };
+
+      classes.push(newClass);
+
+      res.json({ message: "Class added successfully", class: newClass });
     });
 
     //PATCH METHODS
@@ -165,6 +215,28 @@ async function run() {
 
       const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
+    });
+
+    //Manage Class
+    app.patch("/add-classes/:classId", async (req, res) => {
+      const classId = req.params.classId;
+      const updateData = req.body;
+
+      try {
+        const filter = { _id: new ObjectId(classId) };
+        const updateResult = await addClassesCollection.updateOne(filter, {
+          $set: updateData,
+        });
+
+        if (updateResult.modifiedCount === 1) {
+          res.sendStatus(200);
+        } else {
+          res.sendStatus(404);
+        }
+      } catch (error) {
+        console.error("Error updating class:", error);
+        res.sendStatus(500);
+      }
     });
 
     //DELETE METHODS
