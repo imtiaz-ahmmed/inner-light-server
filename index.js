@@ -122,6 +122,28 @@ async function run() {
         });
       }
     });
+    app.get("/payments", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        return res
+          .status(400)
+          .send({ error: true, message: "Email parameter is missing." });
+      }
+
+      const query = { email: email };
+      const sort = { date: -1 }; // Sort by date field in descending order
+
+      try {
+        const result = await paymentCollection.find(query).sort(sort).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error retrieving selected classes:", error);
+        res.status(500).send({
+          error: true,
+          message: "An error occurred while retrieving selected classes.",
+        });
+      }
+    });
 
     //Verify User Admin/student/Instructor
 
