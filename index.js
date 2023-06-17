@@ -82,7 +82,11 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
-
+    app.get("/add-classes", async (req, res) => {
+      const cursor = addClassesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
     app.get("/instructors", async (req, res) => {
       const cursor = instructorsCollection.find().limit(6);
       const result = await cursor.toArray();
